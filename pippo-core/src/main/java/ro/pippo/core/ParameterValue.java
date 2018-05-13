@@ -15,6 +15,19 @@
  */
 package ro.pippo.core;
 
+import ro.pippo.core.converters.BigDecimalConverter;
+import ro.pippo.core.converters.BooleanConverter;
+import ro.pippo.core.converters.ByteConverter;
+import ro.pippo.core.converters.CharacterConverter;
+import ro.pippo.core.converters.Converter;
+import ro.pippo.core.converters.DoubleConverter;
+import ro.pippo.core.converters.EnumConverter;
+import ro.pippo.core.converters.FloatConverter;
+import ro.pippo.core.converters.IntegerConverter;
+import ro.pippo.core.converters.LongConverter;
+import ro.pippo.core.converters.ShortConverter;
+import ro.pippo.core.converters.StringConverter;
+import ro.pippo.core.converters.UUIDConverter;
 import ro.pippo.core.util.StringUtils;
 
 import java.io.Serializable;
@@ -32,9 +45,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -46,6 +61,27 @@ import java.util.UUID;
  * @author James Moger
  */
 public class ParameterValue implements Serializable {
+
+    private static final Map<Class, Converter> CONVERTERS = new HashMap<>();
+
+    static {
+        // TODO: tem que registrar os primitivos e wrapper
+        // tipo: Boolean.TYPE e Boolean.class
+        // Primitives
+        CONVERTERS.put(Boolean.TYPE, new BooleanConverter(false));
+        CONVERTERS.put(Byte.TYPE, new ByteConverter((byte) 0));
+        CONVERTERS.put(Short.TYPE, new ShortConverter((short) 0));
+        CONVERTERS.put(Integer.TYPE, new IntegerConverter(0));
+        CONVERTERS.put(Long.TYPE, new LongConverter(0L));
+        CONVERTERS.put(Float.TYPE, new FloatConverter(0f));
+        CONVERTERS.put(Double.TYPE, new DoubleConverter(0d));
+        CONVERTERS.put(Character.TYPE, new CharacterConverter((char) 0));
+
+        // Others
+        CONVERTERS.put(String.class, new StringConverter(null));
+        CONVERTERS.put(BigDecimal.class, new BigDecimalConverter(BigDecimal.ZERO));
+        CONVERTERS.put(UUID.class, new UUIDConverter(null));
+    }
 
     private final Locale locale;
     private final String[] values;
@@ -60,163 +96,103 @@ public class ParameterValue implements Serializable {
     }
 
     public boolean toBoolean() {
-        return toBoolean(false);
+        return toObject(Boolean.TYPE, null);
     }
 
     public boolean toBoolean(boolean defaultValue) {
-        if (isNull()) {
-            return defaultValue;
-        }
-        switch (values[0]) {
-            case "yes":
-            case "on":
-                return true;
-            default:
-                try {
-                    return Integer.parseInt(values[0]) > 0;
-                } catch (NumberFormatException e) {
-                    // NaN
-                }
-
-                return Boolean.parseBoolean(values[0]);
-        }
+        BooleanConverter converter = new BooleanConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public byte toByte() {
-        return toByte((byte) 0);
+        return toObject(Byte.TYPE, null);
     }
 
     public byte toByte(byte defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        return Byte.parseByte(values[0]);
+        ByteConverter converter = new ByteConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public short toShort() {
-        return toShort((short) 0);
+        return toObject(Short.TYPE, null);
     }
 
     public short toShort(short defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        return Short.parseShort(values[0]);
+        ShortConverter converter = new ShortConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public int toInt() {
-        return toInt(0);
+        return toObject(Integer.TYPE, null);
     }
 
     public int toInt(int defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        return Integer.parseInt(values[0]);
+        IntegerConverter converter = new IntegerConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public long toLong() {
-        return toLong(0);
+        return toObject(Long.TYPE, null);
     }
 
     public long toLong(long defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        return Long.parseLong(values[0]);
+        LongConverter converter = new LongConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public float toFloat() {
-        return toFloat(0);
+        return toObject(Float.TYPE, null);
     }
 
     public float toFloat(float defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        try {
-            Number number = getDecimalFormat().parse(values[0]);
-            return number.floatValue();
-        } catch (ParseException e) {
-            throw new PippoRuntimeException(e, "Failed to parse '{}'", values[0]);
-        }
+        FloatConverter converter = new FloatConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public double toDouble() {
-        return toDouble(0);
+        return toObject(Double.TYPE, null);
     }
 
     public double toDouble(double defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        try {
-            Number number = getDecimalFormat().parse(values[0]);
-            return number.doubleValue();
-        } catch (ParseException e) {
-            throw new PippoRuntimeException(e, "Failed to parse '{}'", values[0]);
-        }
+        DoubleConverter converter = new DoubleConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public BigDecimal toBigDecimal() {
-        return toBigDecimal(BigDecimal.ZERO);
+        return toObject(BigDecimal.class, null);
     }
 
     public BigDecimal toBigDecimal(BigDecimal defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        DecimalFormat formatter = getDecimalFormat();
-        formatter.setParseBigDecimal(true);
-        try {
-            return (BigDecimal) formatter.parse(values[0]);
-        } catch (ParseException e) {
-            throw new PippoRuntimeException(e, "Failed to parse '{}'", values[0]);
-        }
+        BigDecimalConverter converter = new BigDecimalConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public UUID toUUID() {
-        return toUUID(null);
+        return toObject(UUID.class, null);
     }
 
     public UUID toUUID(UUID defaultValue) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        return UUID.fromString(values[0]);
+        UUIDConverter converter = new UUIDConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public Character toCharacter() {
-        return toCharacter((char) 0);
+        return toObject(Character.TYPE, null);
     }
 
     public Character toCharacter(Character defaultValue) {
-        if (isNull() || values[0].length() == 0) {
-            return defaultValue;
-        }
-
-        return values[0].charAt(0);
+        CharacterConverter converter = new CharacterConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     @Override
     public String toString() {
-        return toString(null);
+        return toObject(String.class, null);
     }
 
     public String toString(String defaultValue) {
-        if (isNull()) {
-            return defaultValue;
-        }
-
-        return values[0];
+        StringConverter converter = new StringConverter(defaultValue);
+        return converter.convert(values[0]);
     }
 
     public <T extends Enum<?>> T toEnum(Class<T> classOfT) {
@@ -228,35 +204,8 @@ public class ParameterValue implements Serializable {
     }
 
     public <T extends Enum<?>> T toEnum(Class<T> classOfT, T defaultValue, boolean caseSensitive) {
-        if (isNull() || StringUtils.isNullOrEmpty(values[0])) {
-            return defaultValue;
-        }
-
-        int ordinal = Integer.MIN_VALUE;
-        try {
-            // attempt to interpret value as an ordinal
-            ordinal = Integer.parseInt(values[0]);
-        } catch (Exception e) {
-            // do nothing
-        }
-
-        T[] constants = classOfT.getEnumConstants();
-        for (T constant : constants) {
-            if (constant.ordinal() == ordinal) {
-                return constant;
-            }
-            if (caseSensitive) {
-                if (constant.name().equals(values[0])) {
-                    return constant;
-                }
-            } else {
-                if (constant.name().equalsIgnoreCase(values[0])) {
-                    return constant;
-                }
-            }
-        }
-
-        return defaultValue;
+        EnumConverter<T> converter = new EnumConverter<T>(classOfT, null, true);
+        return converter.convert(values[0]);
     }
 
     public Set<String> toSet() {
@@ -459,82 +408,93 @@ public class ParameterValue implements Serializable {
     }
 
     @SuppressWarnings("unchecked")
-    private Object toObject(Class<?> type, String pattern) {
-        if (type == String.class) {
-            return toString();
+    private <T> T toObject(Class<T> type, String pattern) {
+        Converter<T> converter = CONVERTERS.get(type);
+
+        if (converter != null) {
+            return converter.convert(values[0]);
         }
 
-        if ((type == Boolean.TYPE) || (type == Boolean.class)) {
-            return toBoolean();
-        }
+//        if (type.isEnum()) {
+//            converter = new EnumConverter(type, null, true);
+//            return converter.convert(values[0]);
+//        }
 
-        if ((type == Byte.TYPE) || (type == Byte.class)) {
-            return toByte();
-        }
-
-        if ((type == Short.TYPE) || (type == Short.class)) {
-            return toShort();
-        }
-
-        if ((type == Integer.TYPE) || (type == Integer.class)) {
-            return toInt();
-        }
-
-        if ((type == Long.TYPE) || (type == Long.class)) {
-            return toLong();
-        }
-
-        if ((type == Float.TYPE) || (type == Float.class)) {
-            return toFloat();
-        }
-
-        if ((type == Double.TYPE) || (type == Double.class)) {
-            return toDouble();
-        }
-
-        if ((type == Character.TYPE) || (type == Character.class)) {
-            return toCharacter();
-        }
-
-        if (type == BigDecimal.class) {
-            return toBigDecimal();
-        }
-
-        if (type == UUID.class) {
-            return toUUID();
-        }
-
-        if (type.isEnum()) {
-            return toEnum((Class<? extends Enum>) type);
-        }
-
-        if (pattern == null) {
-            // no defined pattern, use type defaults
-            if (type == java.sql.Date.class) {
-                return toSqlDate();
-            }
-
-            if (type == Time.class) {
-                return toSqlTime();
-            }
-
-            if (type == Timestamp.class) {
-                return toSqlTimestamp();
-            }
-        } else {
-            if (Date.class.isAssignableFrom(type)) {
-                Date date = toDate(pattern);
-                if (type == Date.class) {
-                    return date;
-                } else if (type == java.sql.Date.class) {
-                    return new java.sql.Date(date.getTime());
-                } else if (type == Time.class) {
-                    return new Time(date.getTime());
-                } else if (type == Timestamp.class) {
-                    return new Timestamp(date.getTime());
-                }
-            }
-        }
+//        if (type == String.class) {
+//            return toString();
+//        }
+//
+//        if ((type == Boolean.TYPE) || (type == Boolean.class)) {
+//            return toBoolean();
+//        }
+//
+//        if ((type == Byte.TYPE) || (type == Byte.class)) {
+//            return toByte();
+//        }
+//
+//        if ((type == Short.TYPE) || (type == Short.class)) {
+//            return toShort();
+//        }
+//
+//        if ((type == Integer.TYPE) || (type == Integer.class)) {
+//            return toInt();
+//        }
+//
+//        if ((type == Long.TYPE) || (type == Long.class)) {
+//            return toLong();
+//        }
+//
+//        if ((type == Float.TYPE) || (type == Float.class)) {
+//            return toFloat();
+//        }
+//
+//        if ((type == Double.TYPE) || (type == Double.class)) {
+//            return toDouble();
+//        }
+//
+//        if ((type == Character.TYPE) || (type == Character.class)) {
+//            return toCharacter();
+//        }
+//
+//        if (type == BigDecimal.class) {
+//            return toBigDecimal();
+//        }
+//
+//        if (type == UUID.class) {
+//            return toUUID();
+//        }
+//
+//        if (type.isEnum()) {
+//            return toEnum((Class<? extends Enum>) type);
+//        }
+//
+//        if (pattern == null) {
+//            // no defined pattern, use type defaults
+//            if (type == java.sql.Date.class) {
+//                return toSqlDate();
+//            }
+//
+//            if (type == Time.class) {
+//                return toSqlTime();
+//            }
+//
+//            if (type == Timestamp.class) {
+//                return toSqlTimestamp();
+//            }
+//        } else {
+//            if (Date.class.isAssignableFrom(type)) {
+//                Date date = toDate(pattern);
+//                if (type == Date.class) {
+//                    return date;
+//                } else if (type == java.sql.Date.class) {
+//                    return new java.sql.Date(date.getTime());
+//                } else if (type == Time.class) {
+//                    return new Time(date.getTime());
+//                } else if (type == Timestamp.class) {
+//                    return new Timestamp(date.getTime());
+//                }
+//            }
+//        }
 
         throw new PippoRuntimeException("Cannot convert '{}' to type '{}'", toString(), type);
     }
