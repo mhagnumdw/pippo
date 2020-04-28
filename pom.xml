@@ -56,9 +56,25 @@
         <mockito.version>2.24.0</mockito.version>
         <cobertura.version>2.7</cobertura.version>
         <coveralls.version>3.1.0</coveralls.version>
+
+        <maven.resources.plugin>3.1.0</maven.resources.plugin>
     </properties>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <!-- http://stackoverflow.com/questions/7223031/how-to-embed-archetype-project-version-in-maven-archetype -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${maven.resources.plugin}</version>
+                    <configuration>
+                        <escapeString>\</escapeString>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
